@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Clearance requests{% endblock %}
+{% block content %}
+<h1>Clearance requests</h1>
+<p>
+  <a href="?status=all">All</a> ·
+  <a href="?status=pending">Pending</a> ·
+  <a href="?status=approved">Approved</a> ·
+  <a href="?status=rejected">Rejected</a>
+</p>
+<table>
+  <thead><tr><th>ID</th><th>Student</th><th>RRR</th><th>Auto</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>#{{ r.id }}</td>
+      <td>{{ r.full_name }} ({{ r.matric_no or r.username }})</td>
+      <td><code>{{ r.payment_reference }}</code></td>
+      <td>{{ r.auto_decision }} / {{ r.auto_score }}</td>
+      <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      <td><a href="{{ url_for('admin.review', rid=r.id) }}">Open</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

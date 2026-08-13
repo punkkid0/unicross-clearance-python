@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Admin dashboard{% endblock %}
+{% block content %}
+<h1>Bursary dashboard</h1>
+<div class="stats">
+  <div class="stat"><b>{{ stats.students }}</b><span>Students</span></div>
+  <div class="stat"><b>{{ stats.pending }}</b><span>Pending requests</span></div>
+  <div class="stat"><b>{{ stats.approved }}</b><span>Approved</span></div>
+  <div class="stat"><b>{{ stats.payments }}</b><span>Ledger payments</span></div>
+</div>
+<h2>Recent requests</h2>
+<table>
+  <thead><tr><th>ID</th><th>Student</th><th>Status</th><th>Score</th><th></th></tr></thead>
+  <tbody>
+  {% for r in recent %}
+    <tr>
+      <td>#{{ r.id }}</td>
+      <td>{{ r.full_name }} (@{{ r.username }})</td>
+      <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      <td>{{ r.auto_score }}</td>
+      <td><a href="{{ url_for('admin.review', rid=r.id) }}">Review</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

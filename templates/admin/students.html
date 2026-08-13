@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Students{% endblock %}
+{% block content %}
+<h1>Students</h1>
+<table>
+  <thead><tr><th>Name</th><th>Username</th><th>Matric</th><th>Indigene</th><th></th></tr></thead>
+  <tbody>
+  {% for s in rows %}
+    <tr>
+      <td>{{ s.full_name }}</td>
+      <td>{{ s.username }}</td>
+      <td>{{ s.matric_no or '—' }}</td>
+      <td>{{ 'Yes' if s.is_indigene else 'No' }}</td>
+      <td>
+        <form method="post" class="inline">
+          <input type="hidden" name="student_id" value="{{ s.id }}">
+          <input type="hidden" name="is_indigene" value="{{ '0' if s.is_indigene else '1' }}">
+          <button class="btn ghost" type="submit">Set {{ 'non-indigene' if s.is_indigene else 'indigene' }}</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

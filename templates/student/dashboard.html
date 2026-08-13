@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Student dashboard{% endblock %}
+{% block content %}
+<h1>Welcome, {{ student.full_name }}</h1>
+<div class="grid">
+  <article class="card">
+    <h2>School fee</h2>
+    <p>Status: <strong>{{ 'Indigene' if student.is_indigene else 'Non-indigene' }}</strong></p>
+    <p>Required: <strong>₦{{ '{:,.0f}'.format(fee) }}</strong></p>
+    <p>Recorded on ledger: <strong>₦{{ '{:,.0f}'.format(paid) }}</strong></p>
+    <a class="btn" href="{{ url_for('pay.start') }}">Pay school fees</a>
+  </article>
+  <article class="card">
+    <h2>Clearance</h2>
+    {% if latest %}
+      <p>Latest request #{{ latest.id }} —
+        <span class="badge {{ latest.status }}">{{ latest.status }}</span>
+      </p>
+      <p>Auto-check: {{ latest.auto_decision }} ({{ latest.auto_score }}/100)</p>
+      <a href="{{ url_for('student.request_detail', rid=latest.id) }}">View units</a>
+      {% if latest.certificate_path %}
+        <p><a class="btn" href="{{ latest.certificate_path }}">Download certificate</a></p>
+      {% endif %}
+    {% else %}
+      <p>You have not submitted a clearance request yet.</p>
+      <a class="btn" href="{{ url_for('student.clearance') }}">Request clearance</a>
+    {% endif %}
+  </article>
+</div>
+
+<h2>Unit progress</h2>
+{% if unit_rows %}
+<table>
+  <thead><tr><th>Unit</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for u in unit_rows %}
+    <tr>
+      <td>{{ dict(units).get(u.unit_code, u.unit_code) }}</td>
+      <td><span class="badge {{ u.status }}">{{ u.status }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Submit a request to start unit clearance (Bursary, Library, Faculty, Department, Hostel, Student Affairs).</p>
+{% endif %}
+{% endblock %}

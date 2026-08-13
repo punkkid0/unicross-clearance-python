@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Official ledger{% endblock %}
+{% block content %}
+<h1>Official school-fee ledger</h1>
+<p>This is the source of truth for automatic verification (thesis: bank API / gateway or bursary record).</p>
+<section class="card">
+  <h2>Record a payment</h2>
+  <form method="post">
+    <label>Student
+      <select name="student_id" required>
+        <option value="">Select…</option>
+        {% for s in students %}
+          <option value="{{ s.id }}">{{ s.full_name }} (@{{ s.username }}) — {{ 'indigene' if s.is_indigene else 'non-indigene' }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>RRR / reference <input type="text" name="rrr" required minlength="5"></label>
+    <label>Amount
+      <select name="amount" required>
+        <option value="75600">₦75,600 (indigene)</option>
+        <option value="81500">₦81,500 (non-indigene)</option>
+      </select>
+    </label>
+    <label>Method
+      <select name="payment_method">
+        <option value="remita">Remita</option>
+        <option value="paystack">Paystack</option>
+        <option value="bank_transfer">Bank transfer</option>
+        <option value="cash">Cash</option>
+      </select>
+    </label>
+    <label>Notes <input type="text" name="notes"></label>
+    <button class="btn" type="submit">Save to ledger</button>
+  </form>
+</section>
+<table>
+  <thead><tr><th>RRR</th><th>Student</th><th>Amount</th><th>Method</th><th>Date</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><code>{{ r.rrr }}</code></td>
+      <td>{{ r.full_name }}</td>
+      <td>₦{{ r.amount }}</td>
+      <td>{{ r.payment_method }}</td>
+      <td>{{ r.payment_date }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

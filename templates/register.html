@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Student registration</h1>
+  <p class="muted">Admin accounts are created by the bursary, not on this form.</p>
+  <form method="post">
+    <label>Full name <input type="text" name="full_name" required></label>
+    <label>Username <input type="text" name="username" required></label>
+    <label>Email <input type="email" name="email" required></label>
+    <label>Matric number (optional) <input type="text" name="matric_no"></label>
+    <label>Password <input type="password" name="password" required minlength="8"></label>
+    <label>Confirm password <input type="password" name="confirm_password" required></label>
+    <button type="submit" class="btn">Register</button>
+  </form>
+  <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+</section>
+{% endblock %}

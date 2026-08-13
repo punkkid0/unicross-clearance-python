@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Review #{{ req.id }}{% endblock %}
+{% block content %}
+<h1>Review request #{{ req.id }}</h1>
+<div class="grid">
+  <article class="card">
+    <h2>Student</h2>
+    <p>{{ req.full_name }} (@{{ req.username }})</p>
+    <p>{{ req.email }} · Matric {{ req.matric_no or '—' }}</p>
+    <p>Indigene: <strong>{{ 'Yes' if req.is_indigene else 'No' }}</strong> · Expected ₦{{ '{:,.0f}'.format(fee) }}</p>
+    <form method="post" class="inline">
+      <input type="hidden" name="action" value="indigene">
+      <input type="hidden" name="is_indigene" value="{{ '0' if req.is_indigene else '1' }}">
+      <button class="btn ghost" type="submit">Set as {{ 'non-indigene' if req.is_indigene else 'indigene' }}</button>
+    </form>
+  </article>
+  <article class="card">
+    <h2>Automatic verification</h2>
+    <p class="score">{{ req.auto_score }}/100
+      <span class="badge {{ req.auto_decision }}">{{ req.auto_decision }}</span></p>
+    <p>Declared: ₦{{ req.declared_amount }} · RRR <code>{{ req.payment_reference }}</code></p>
+    <ul>{% for r in reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  </article>
+</div>
+
+{% if req.receipt_path %}
+  <p><img class="preview" src="{{ req.receipt_path }}" alt="Receipt"></p>
+{% endif %}
+
+<h2>Unit decisions</h2>
+<p class="muted">Thesis units: Bursary, Library, Faculty, Department, Hostel, Student Affairs. All six must approve before the certificate is issued.</p>
+{% for u in units %}
+<article class="card">
+  <h3>{{ dict(units).get(u.unit_code, u.unit_code) }}
+    <span class="badge {{ u.status }}">{{ u.status }}</span></h3>
+  {% if req.status == 'pending' and u.status == 'pending' %}
+  <form method="post" class="unit-form">
+    <input type="hidden" name="unit_code" value="{{ u.unit_code }}">
+    <label>Note / rejection reason
+      <textarea name="reason" placeholder="Required if you reject (min 5 characters)"></textarea>
+    </label>
+    <button class="btn" name="action" value="approve_unit" type="submit">Approve this unit</button>
+    <button class="btn danger" name="action" value="reject_unit" type="submit">Reject</button>
+  </form>
+  {% elif u.reason %}
+    <p>{{ u.reason }}</p>
+  {% endif %}
+</article>
+{% endfor %}
+{% endblock %}

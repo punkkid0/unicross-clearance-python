@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h1>Reports</h1>
+<div class="grid">
+  <article class="card">
+    <h2>Clearance requests</h2>
+    <ul>
+      {% for r in by_status %}
+        <li>{{ r.status }}: {{ r.n }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+  <article class="card">
+    <h2>Official payments</h2>
+    <p>{{ payments.n }} successful payments</p>
+    <p>Total: ₦{{ payments.total }}</p>
+  </article>
+</div>
+<h2>By unit</h2>
+<table>
+  <thead><tr><th>Unit</th><th>Status</th><th>Count</th></tr></thead>
+  <tbody>
+  {% for r in by_unit %}
+    <tr>
+      <td>{{ dict(units).get(r.unit_code, r.unit_code) }}</td>
+      <td>{{ r.status }}</td>
+      <td>{{ r.n }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

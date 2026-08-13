@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Login — UNICROSS Clearance{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Sign in</h1>
+  <p class="muted">Students and bursary staff use the same page. Your role decides what you see next.</p>
+  <form method="post">
+    <label>Username or email
+      <input type="text" name="username" required>
+    </label>
+    <label>Password
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit" class="btn">Login</button>
+  </form>
+  <p>New student? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>My profile</h1>
+  <form method="post">
+    <label>Full name <input type="text" name="full_name" value="{{ student.full_name }}" required></label>
+    <label>Email <input type="email" name="email" value="{{ student.email }}" required></label>
+    <label>Matric number <input type="text" name="matric_no" value="{{ student.matric_no or '' }}"></label>
+    <p>Username: <strong>{{ student.username }}</strong> (cannot change)</p>
+    <p>Indigene status: <strong>{{ 'Indigene' if student.is_indigene else 'Non-indigene' }}</strong>
+      — expected fee ₦{{ '{:,.0f}'.format(fee) }}</p>
+    <p class="hint">Only bursary can change indigene status.</p>
+    <button type="submit" class="btn">Save</button>
+  </form>
+</section>
+{% endblock %}
