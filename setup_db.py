@@ -52,21 +52,41 @@ def main():
     conn.autocommit = True
     cur = conn.cursor()
     schema = (ROOT / "sql" / "schema.sql").read_text(encoding="utf-8")
+    
+    # Drop existing tables to apply the new schema cleanly
+    cur.execute("""
+        DROP TABLE IF EXISTS audit_log CASCADE;
+        DROP TABLE IF EXISTS clearance_units CASCADE;
+        DROP TABLE IF EXISTS clearance_requests CASCADE;
+        DROP TABLE IF EXISTS transactions CASCADE;
+        DROP TABLE IF EXISTS payments CASCADE;
+        DROP TABLE IF EXISTS school_fee_payments CASCADE;
+        DROP TABLE IF EXISTS departments CASCADE;
+        DROP TABLE IF EXISTS students CASCADE;
+        DROP TABLE IF EXISTS users CASCADE;
+    """)
+
     # pg8000 executes one statement; split on semicolons carefully
     for stmt in split_sql(schema):
         cur.execute(stmt)
     print("Schema applied")
 
-    cur.execute("SELECT id FROM users WHERE username = %s", ("admin",))
-    if cur.fetchone() is None:
+    cur.execute(
+        """INSERT INTO users (username, email, password_hash, full_name, role)
+           VALUES (%s, %s, %s, %s, 'super_admin')
+           ON CONFLICT (username) DO UPDATE SET role = 'super_admin'""",
+        ("admin", "admin@school.edu", hash_pw("admin123"), "Super Admin"),
+    )
+    # Seed department admins
+    from config import CLEARANCE_UNITS
+    for code, name in CLEARANCE_UNITS:
         cur.execute(
             """INSERT INTO users (username, email, password_hash, full_name, role)
-               VALUES (%s, %s, %s, %s, 'admin')""",
-            ("admin", "admin@school.edu", hash_pw("admin123"), "System Administrator"),
+               VALUES (%s, %s, %s, %s, %s)
+               ON CONFLICT (username) DO UPDATE SET role = %s""",
+            (f"admin_{code}", f"{code}@school.edu", hash_pw("admin123"), f"{name} Admin", f"admin_{code}", f"admin_{code}"),
         )
-        print("Seeded admin / admin123")
-    else:
-        print("Admin already exists")
+    print("Seeded super_admin and department admins (password: admin123)")
 
     cur.execute("SELECT id FROM users WHERE username = %s", ("student1",))
     row = cur.fetchone()
@@ -84,8 +104,8 @@ def main():
         )
         sid = cur.fetchone()[0]
         cur.execute(
-            """INSERT INTO school_fee_payments (rrr, student_id, amount, payment_method, notes)
-               VALUES (%s, %s, %s, 'remita', 'Demo official payment for student1')
+            """INSERT INTO payments (rrr, student_id, amount, payment_type, payment_method, notes)
+               VALUES (%s, %s, %s, 'bursary', 'remita', 'Demo official payment for student1')
                ON CONFLICT (rrr) DO NOTHING""",
             ("RRR-STUDENT1-001234567890", sid, 75600),
         )

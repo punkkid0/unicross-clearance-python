@@ -7,44 +7,57 @@
     <h2>Student</h2>
     <p>{{ req.full_name }} (@{{ req.username }})</p>
     <p>{{ req.email }} · Matric {{ req.matric_no or '—' }}</p>
-    <p>Indigene: <strong>{{ 'Yes' if req.is_indigene else 'No' }}</strong> · Expected ₦{{ '{:,.0f}'.format(fee) }}</p>
-    <form method="post" class="inline">
-      <input type="hidden" name="action" value="indigene">
-      <input type="hidden" name="is_indigene" value="{{ '0' if req.is_indigene else '1' }}">
-      <button class="btn ghost" type="submit">Set as {{ 'non-indigene' if req.is_indigene else 'indigene' }}</button>
-    </form>
-  </article>
-  <article class="card">
-    <h2>Automatic verification</h2>
-    <p class="score">{{ req.auto_score }}/100
-      <span class="badge {{ req.auto_decision }}">{{ req.auto_decision }}</span></p>
-    <p>Declared: ₦{{ req.declared_amount }} · RRR <code>{{ req.payment_reference }}</code></p>
-    <ul>{% for r in reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+    <p>Indigene: <strong>{{ 'Yes' if req.is_indigene else 'No' }}</strong></p>
+    {% if g.user.role == 'super_admin' or g.user.role == 'admin_bursary' %}
+      <form method="post" class="inline">
+        <input type="hidden" name="action" value="indigene">
+        <input type="hidden" name="is_indigene" value="{{ '0' if req.is_indigene else '1' }}">
+        <button class="btn ghost" type="submit">Set as {{ 'non-indigene' if req.is_indigene else 'indigene' }}</button>
+      </form>
+    {% endif %}
   </article>
 </div>
 
-{% if req.receipt_path %}
-  <p><img class="preview" src="{{ req.receipt_path }}" alt="Receipt"></p>
-{% endif %}
-
 <h2>Unit decisions</h2>
-<p class="muted">Thesis units: Bursary, Library, Faculty, Department, Hostel, Student Affairs. All six must approve before the certificate is issued.</p>
-{% for u in units %}
-<article class="card">
-  <h3>{{ dict(units).get(u.unit_code, u.unit_code) }}
-    <span class="badge {{ u.status }}">{{ u.status }}</span></h3>
-  {% if req.status == 'pending' and u.status == 'pending' %}
-  <form method="post" class="unit-form">
-    <input type="hidden" name="unit_code" value="{{ u.unit_code }}">
-    <label>Note / rejection reason
-      <textarea name="reason" placeholder="Required if you reject (min 5 characters)"></textarea>
-    </label>
-    <button class="btn" name="action" value="approve_unit" type="submit">Approve this unit</button>
-    <button class="btn danger" name="action" value="reject_unit" type="submit">Reject</button>
-  </form>
-  {% elif u.reason %}
-    <p>{{ u.reason }}</p>
-  {% endif %}
-</article>
+<p class="muted">All required departments must approve before the certificate is issued.</p>
+<div style="display: flex; flex-direction: column; gap: 20px;">
+{% for u in unit_rows %}
+  <article class="card">
+    <h3>{{ unit_names.get(u.unit_code, u.unit_code) }}
+      <span class="badge {{ u.status }}">{{ u.status }}</span>
+    </h3>
+    
+    {% if u.receipt_path %}
+      <div style="margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 5px;">
+        <h4>Submitted Receipt Details</h4>
+        <p>Declared: ₦{{ u.declared_amount }} · RRR <code>{{ u.payment_reference }}</code></p>
+        <p>Auto-check: {{ u.auto_decision }} ({{ u.auto_score }}/100)</p>
+        {% if u.parsed_reasons %}
+          <ul>{% for r in u.parsed_reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+        {% endif %}
+        <img class="preview" src="{{ u.receipt_path }}" alt="Receipt" style="max-height: 200px; display: block; margin-top: 10px;">
+      </div>
+    {% else %}
+      <p><em>No receipt uploaded for this unit yet.</em></p>
+    {% endif %}
+
+    {% if req.status == 'pending' and u.status == 'pending' %}
+      {% if g.user.role == 'super_admin' or g.user.role == 'admin_' ~ u.unit_code %}
+        <form method="post" class="unit-form">
+          <input type="hidden" name="unit_code" value="{{ u.unit_code }}">
+          <label>Note / rejection reason
+            <textarea name="reason" placeholder="Required if you reject (min 5 characters)"></textarea>
+          </label>
+          <button class="btn" name="action" value="approve_unit" type="submit">Approve this unit</button>
+          <button class="btn danger" name="action" value="reject_unit" type="submit">Reject</button>
+        </form>
+      {% else %}
+        <p class="muted">Waiting for {{ unit_names.get(u.unit_code, u.unit_code) }} Admin to review.</p>
+      {% endif %}
+    {% elif u.reason %}
+      <p><strong>Note:</strong> {{ u.reason }}</p>
+    {% endif %}
+  </article>
 {% endfor %}
+</div>
 {% endblock %}

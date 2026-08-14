@@ -9,7 +9,7 @@ bp = Blueprint("auth", __name__)
 def home():
     if not g.user:
         return redirect(url_for("auth.login"))
-    if g.user["role"] == "admin":
+    if g.user["role"] != "student":
         return redirect(url_for("admin.dashboard"))
     return redirect(url_for("student.dashboard"))
 

@@ -23,7 +23,7 @@
   <tbody>
   {% for r in by_unit %}
     <tr>
-      <td>{{ dict(units).get(r.unit_code, r.unit_code) }}</td>
+      <td>{{ unit_names.get(r.unit_code, r.unit_code) }}</td>
       <td>{{ r.status }}</td>
       <td>{{ r.n }}</td>
     </tr>

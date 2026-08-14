@@ -2,28 +2,45 @@
 {% block title %}Request #{{ req.id }}{% endblock %}
 {% block content %}
 <h1>Request #{{ req.id }}</h1>
-<p>Status: <span class="badge {{ req.status }}">{{ req.status }}</span>
-   · Auto-check: {{ req.auto_decision }} ({{ req.auto_score }}/100)</p>
-<p>RRR: <code>{{ req.payment_reference }}</code> · Amount: ₦{{ req.declared_amount }}</p>
-{% if reasons %}
-<ul>{% for r in reasons %}<li>{{ r }}</li>{% endfor %}</ul>
-{% endif %}
-{% if req.receipt_path %}
-  <p><img class="preview" src="{{ req.receipt_path }}" alt="Receipt"></p>
-{% endif %}
-<table>
-  <thead><tr><th>Unit</th><th>Status</th><th>Note</th></tr></thead>
-  <tbody>
-  {% for u in units %}
-    <tr>
-      <td>{{ dict(units).get(u.unit_code, u.unit_code) }}</td>
-      <td><span class="badge {{ u.status }}">{{ u.status }}</span></td>
-      <td>{{ u.reason or '—' }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<p>Status: <span class="badge {{ req.status }}">{{ req.status }}</span></p>
+
 {% if req.certificate_path %}
   <p><a class="btn" href="{{ req.certificate_path }}">Download clearance certificate</a></p>
 {% endif %}
+
+<div style="display: flex; flex-direction: column; gap: 20px;">
+{% for u in units %}
+  <section class="card">
+    <h2>{{ unit_names.get(u.unit_code, u.unit_code) }}</h2>
+    <p>Expected Fee: <strong>₦{{ '{:,.0f}'.format(u.expected_fee) }}</strong></p>
+    <p>Status: <span class="badge {{ u.status }}">{{ u.status }}</span></p>
+
+    {% if u.receipt_path %}
+      <p>RRR: <code>{{ u.payment_reference }}</code> · Amount: ₦{{ u.declared_amount }}</p>
+
+      <p><img class="preview" src="{{ u.receipt_path }}" alt="Receipt"></p>
+      {% if u.status == 'rejected' %}
+        <p class="alert error">Rejected Reason: {{ u.reason }}</p>
+        <p><strong>You can re-upload your receipt below:</strong></p>
+      {% endif %}
+    {% endif %}
+
+    {% if not u.receipt_path or u.status == 'rejected' %}
+      <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="unit_id" value="{{ u.id }}">
+        <label>Amount paid (₦)
+          <input type="number" name="declared_amount" value="{{ u.expected_fee }}" required>
+        </label>
+        <label>Official payment reference (RRR) *
+          <input type="text" name="payment_reference" required minlength="5">
+        </label>
+        <label>Receipt image *
+          <input type="file" name="receipt" accept="image/*" required>
+        </label>
+        <button type="submit" class="btn">Upload {{ unit_names.get(u.unit_code, u.unit_code) }} Receipt</button>
+      </form>
+    {% endif %}
+  </section>
+{% endfor %}
+</div>
 {% endblock %}

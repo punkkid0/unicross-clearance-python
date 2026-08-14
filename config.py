@@ -14,16 +14,32 @@ DB_NAME = os.getenv("DB_NAME", "unicross_clearance")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
-PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "").strip()
-PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY", "").strip()
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000").rstrip("/")
 
 UPLOAD_DIR = ROOT / "uploads"
 RECEIPT_DIR = UPLOAD_DIR / "receipts"
 CERT_DIR = UPLOAD_DIR / "certificates"
+PROFILE_DIR = UPLOAD_DIR / "profiles"
+CREDENTIALS_DIR = UPLOAD_DIR / "credentials"
 
-FEE_INDIGENE = 75600
-FEE_NON_INDIGENE = 81500
+# Base fees for the specific units
+FEES_INDIGENE = {
+    "bursary": 75600,
+    "library": 2000,
+    "faculty": 5000,
+    "department": 3000,
+    "hostel": 15000,
+    "student_affairs": 1500,
+}
+
+FEES_NON_INDIGENE = {
+    "bursary": 81500,
+    "library": 2000,
+    "faculty": 5000,
+    "department": 3000,
+    "hostel": 15000,
+    "student_affairs": 1500,
+}
 
 CLEARANCE_UNITS = [
     ("bursary", "Bursary"),
@@ -34,6 +50,9 @@ CLEARANCE_UNITS = [
     ("student_affairs", "Student Affairs"),
 ]
 
+ADMIN_ROLES = ["super_admin"] + [f"admin_{unit[0]}" for unit in CLEARANCE_UNITS]
 
-def expected_fee(is_indigene: bool) -> int:
-    return FEE_INDIGENE if is_indigene else FEE_NON_INDIGENE
+def expected_fee(is_indigene: bool, unit_code: str = "bursary") -> int:
+    fees = FEES_INDIGENE if is_indigene else FEES_NON_INDIGENE
+    return fees.get(unit_code, 0)
+

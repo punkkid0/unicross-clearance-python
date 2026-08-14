@@ -24,16 +24,20 @@ def valid_password(pw: str) -> str | None:
     return None
 
 
-def login_required(role=None):
+def login_required(*roles):
     def deco(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             if not g.user:
                 flash("Please log in first.", "error")
                 return redirect(url_for("auth.login"))
-            if role and g.user["role"] != role:
-                flash("You do not have access to that page.", "error")
-                return redirect(url_for("auth.home"))
+            if roles and g.user["role"] not in roles:
+                # If they are super_admin, let them access any admin route. But not student routes.
+                if g.user["role"] == "super_admin" and any(r.startswith("admin") for r in roles):
+                    pass # super admin gets access
+                else:
+                    flash("You do not have access to that page.", "error")
+                    return redirect(url_for("auth.home"))
             return fn(*args, **kwargs)
         return wrapper
     return deco

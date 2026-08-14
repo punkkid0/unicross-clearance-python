@@ -16,6 +16,8 @@ def create_app():
 
     config.RECEIPT_DIR.mkdir(parents=True, exist_ok=True)
     config.CERT_DIR.mkdir(parents=True, exist_ok=True)
+    config.PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+    config.CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
 
     app.teardown_appcontext(close_db)
 
@@ -30,10 +32,7 @@ def create_app():
     def inject():
         return {
             "current_user": g.get("user"),
-            "fee_indigene": config.FEE_INDIGENE,
-            "fee_non_indigene": config.FEE_NON_INDIGENE,
-            "units": config.CLEARANCE_UNITS,
-            "paystack_enabled": bool(config.PAYSTACK_SECRET_KEY),
+            "unit_names": dict(config.CLEARANCE_UNITS),
         }
 
     @app.route("/uploads/receipts/<path:filename>")
@@ -48,13 +47,23 @@ def create_app():
             return ("Login required", 401)
         return send_from_directory(config.CERT_DIR, filename)
 
+    @app.route("/uploads/profiles/<path:filename>")
+    def uploaded_profile(filename):
+        if not g.user:
+            return ("Login required", 401)
+        return send_from_directory(config.PROFILE_DIR, filename)
+
+    @app.route("/uploads/credentials/<path:filename>")
+    def uploaded_credentials(filename):
+        if not g.user:
+            return ("Login required", 401)
+        return send_from_directory(config.CREDENTIALS_DIR, filename)
+
     from app.routes_auth import bp as auth_bp
     from app.routes_student import bp as student_bp
     from app.routes_admin import bp as admin_bp
-    from app.routes_pay import bp as pay_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(student_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(pay_bp)
     return app

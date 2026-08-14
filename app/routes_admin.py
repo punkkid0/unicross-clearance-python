@@ -1,15 +1,28 @@
 import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from werkzeug.utils import secure_filename
 from app.db import query
 from app.helpers import login_required, log_action, unit_label
 from app.certificate import generate_certificate
 import config
 
-bp = Blueprint("admin", __name__, url_prefix="/admin")
+bp = Blueprint("admin", __name__, url_prefix="/<admin_type>")
 
+@bp.url_value_preprocessor
+def pull_admin_type(endpoint, values):
+    if values is not None:
+        g.admin_type = values.pop('admin_type', None)
+
+@bp.url_defaults
+def add_admin_type(endpoint, values):
+    if 'admin_type' not in values:
+        if g.get('user'):
+            values['admin_type'] = g.user.get('role', 'admin')
+        else:
+            values['admin_type'] = 'admin'
 
 @bp.route("/dashboard")
-@login_required("admin")
+@login_required(*config.ADMIN_ROLES)
 def dashboard():
     stats = {
         "students": query("SELECT COUNT(*) AS n FROM students", fetch="one")["n"],
@@ -21,37 +34,64 @@ def dashboard():
             "SELECT COUNT(*) AS n FROM clearance_requests WHERE status = 'approved'",
             fetch="one",
         )["n"],
-        "payments": query("SELECT COUNT(*) AS n FROM school_fee_payments", fetch="one")["n"],
+        "payments": query("SELECT COUNT(*) AS n FROM payments WHERE status = 'completed'", fetch="one")["n"],
     }
-    recent = query(
-        """SELECT cr.*, u.full_name, u.username
-           FROM clearance_requests cr
-           JOIN students s ON s.id = cr.student_id
-           JOIN users u ON u.id = s.user_id
-           ORDER BY cr.created_at DESC LIMIT 8"""
-    )
+    if g.user["role"] == "super_admin":
+        recent = query(
+            """SELECT cr.*, u.full_name, u.username
+               FROM clearance_requests cr
+               JOIN students s ON s.id = cr.student_id
+               JOIN users u ON u.id = s.user_id
+               ORDER BY cr.created_at DESC LIMIT 8"""
+        )
+    else:
+        unit = g.user["role"].replace("admin_", "")
+        recent = query(
+            """SELECT cr.*, u.full_name, u.username
+               FROM clearance_requests cr
+               JOIN students s ON s.id = cr.student_id
+               JOIN users u ON u.id = s.user_id
+               JOIN clearance_units cu ON cu.request_id = cr.id
+               WHERE cu.unit_code = %s AND cu.receipt_path IS NOT NULL
+               ORDER BY cr.created_at DESC LIMIT 8""",
+            (unit,)
+        )
     return render_template("admin/dashboard.html", stats=stats, recent=recent)
 
 
 @bp.route("/requests")
-@login_required("admin")
+@login_required(*config.ADMIN_ROLES)
 def requests():
     status = request.args.get("status") or "all"
-    sql = """SELECT cr.*, u.full_name, u.username, s.matric_no, s.is_indigene
-             FROM clearance_requests cr
-             JOIN students s ON s.id = cr.student_id
-             JOIN users u ON u.id = s.user_id"""
     params = []
-    if status != "all":
-        sql += " WHERE cr.status = %s"
-        params.append(status)
+    if g.user["role"] == "super_admin":
+        sql = """SELECT cr.*, u.full_name, u.username, s.matric_no, s.is_indigene
+                 FROM clearance_requests cr
+                 JOIN students s ON s.id = cr.student_id
+                 JOIN users u ON u.id = s.user_id"""
+        if status != "all":
+            sql += " WHERE cr.status = %s"
+            params.append(status)
+    else:
+        unit = g.user["role"].replace("admin_", "")
+        sql = """SELECT cr.*, cu.status AS status, u.full_name, u.username, s.matric_no, s.is_indigene
+                 FROM clearance_requests cr
+                 JOIN students s ON s.id = cr.student_id
+                 JOIN users u ON u.id = s.user_id
+                 JOIN clearance_units cu ON cu.request_id = cr.id
+                 WHERE cu.unit_code = %s AND cu.receipt_path IS NOT NULL"""
+        params.append(unit)
+        if status != "all":
+            sql += " AND cu.status = %s"
+            params.append(status)
+
     sql += " ORDER BY cr.created_at DESC"
     rows = query(sql, params)
     return render_template("admin/requests.html", rows=rows, status=status)
 
 
 @bp.route("/requests/<int:rid>", methods=["GET", "POST"])
-@login_required("admin")
+@login_required(*config.ADMIN_ROLES)
 def review(rid):
     req = query(
         """SELECT cr.*, u.full_name, u.username, u.email, s.matric_no, s.is_indigene, s.id AS sid
@@ -70,14 +110,22 @@ def review(rid):
         action = request.form.get("action")
         unit = request.form.get("unit_code")
         reason = (request.form.get("reason") or "").strip()
+        role = g.user["role"]
 
         if action == "indigene":
+            if role != "super_admin" and role != "admin_bursary":
+                flash("Only Bursary or Super Admin can change indigene status.", "error")
+                return redirect(url_for("admin.review", rid=rid))
             flag = request.form.get("is_indigene") == "1"
             query("UPDATE students SET is_indigene = %s WHERE id = %s", (flag, req["sid"]), fetch="none")
             flash("Indigene status updated.", "success")
             return redirect(url_for("admin.review", rid=rid))
 
         if action in ("approve_unit", "reject_unit"):
+            if role != "super_admin" and role != f"admin_{unit}":
+                flash(f"You do not have permission to approve/reject the {unit} unit.", "error")
+                return redirect(url_for("admin.review", rid=rid))
+
             if req["status"] != "pending":
                 flash("This request is no longer pending.", "error")
                 return redirect(url_for("admin.review", rid=rid))
@@ -123,29 +171,40 @@ def review(rid):
                     flash(f"{unit_label(unit)} approved.", "success")
             return redirect(url_for("admin.review", rid=rid))
 
-    units = query(
-        "SELECT * FROM clearance_units WHERE request_id = %s ORDER BY id",
-        (rid,),
-    )
-    reasons = []
-    if req["auto_reasons"]:
-        try:
-            reasons = json.loads(req["auto_reasons"])
-        except json.JSONDecodeError:
-            reasons = [req["auto_reasons"]]
-    fee = config.expected_fee(bool(req["is_indigene"]))
+    if g.user["role"] == "super_admin":
+        units = query(
+            "SELECT * FROM clearance_units WHERE request_id = %s ORDER BY id",
+            (rid,),
+        )
+    else:
+        unit_code = g.user["role"].replace("admin_", "")
+        units = query(
+            "SELECT * FROM clearance_units WHERE request_id = %s AND unit_code = %s ORDER BY id",
+            (rid, unit_code),
+        )
+    for u in units:
+        if u["auto_reasons"]:
+            try:
+                u["parsed_reasons"] = json.loads(u["auto_reasons"])
+            except json.JSONDecodeError:
+                u["parsed_reasons"] = [u["auto_reasons"]]
+        else:
+            u["parsed_reasons"] = []
+    
     return render_template(
         "admin/review.html",
         req=req,
-        units=units,
-        reasons=reasons,
-        fee=fee,
+        unit_rows=units,
     )
 
 
 @bp.route("/ledger", methods=["GET", "POST"])
-@login_required("admin")
+@login_required(*config.ADMIN_ROLES)
 def ledger():
+    if g.user["role"] != "super_admin" and g.user["role"] != "admin_bursary":
+        flash("Only Bursary or Super Admin can access the ledger.", "error")
+        return redirect(url_for("admin.dashboard"))
+
     students = query(
         """SELECT s.id, u.full_name, u.username, s.matric_no, s.is_indigene
            FROM students s JOIN users u ON u.id = s.user_id
@@ -153,6 +212,7 @@ def ledger():
     )
     if request.method == "POST":
         rrr = (request.form.get("rrr") or "").strip()
+        payment_type = request.form.get("payment_type")
         try:
             student_id = int(request.form.get("student_id"))
             amount = float(request.form.get("amount"))
@@ -164,24 +224,16 @@ def ledger():
         if len(rrr) < 5:
             flash("RRR must be at least 5 characters.", "error")
             return redirect(url_for("admin.ledger"))
-        if amount not in (config.FEE_INDIGENE, config.FEE_NON_INDIGENE):
-            flash("Amount must be the official indigene or non-indigene fee.", "error")
-            return redirect(url_for("admin.ledger"))
-        exists = query("SELECT id FROM school_fee_payments WHERE rrr = %s", (rrr,), fetch="one")
+
+        exists = query("SELECT id FROM payments WHERE rrr = %s", (rrr,), fetch="one")
         if exists:
             flash("That RRR is already on the ledger.", "error")
             return redirect(url_for("admin.ledger"))
+
         query(
-            """INSERT INTO school_fee_payments
-               (rrr, student_id, amount, payment_method, notes, recorded_by)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (rrr, student_id, amount, method, notes or None, g.user["id"]),
-            fetch="none",
-        )
-        query(
-            """INSERT INTO payments (student_id, amount, payment_type, status, rrr)
-               VALUES (%s, %s, 'school_fee', 'completed', %s)""",
-            (student_id, amount, rrr),
+            """INSERT INTO payments (rrr, student_id, amount, payment_type, payment_method, status, notes, recorded_by)
+               VALUES (%s, %s, %s, %s, %s, 'completed', %s, %s)""",
+            (rrr, student_id, amount, payment_type, method, notes or None, g.user["id"]),
             fetch="none",
         )
         log_action("ledger_recorded", rrr)
@@ -190,18 +242,22 @@ def ledger():
 
     rows = query(
         """SELECT p.*, u.full_name, u.username
-           FROM school_fee_payments p
+           FROM payments p
            JOIN students s ON s.id = p.student_id
            JOIN users u ON u.id = s.user_id
-           ORDER BY p.payment_date DESC"""
+           ORDER BY p.created_at DESC"""
     )
-    return render_template("admin/ledger.html", students=students, rows=rows)
+    return render_template("admin/ledger.html", students=students, rows=rows, units=config.CLEARANCE_UNITS)
 
 
 @bp.route("/students", methods=["GET", "POST"])
-@login_required("admin")
+@login_required(*config.ADMIN_ROLES)
 def students():
     if request.method == "POST":
+        if g.user["role"] != "super_admin" and g.user["role"] != "admin_bursary":
+            flash("Only Bursary or Super Admin can edit student info.", "error")
+            return redirect(url_for("admin.students"))
+            
         sid = int(request.form.get("student_id"))
         flag = request.form.get("is_indigene") == "1"
         query("UPDATE students SET is_indigene = %s WHERE id = %s", (flag, sid), fetch="none")
@@ -216,7 +272,7 @@ def students():
 
 
 @bp.route("/reports")
-@login_required("admin")
+@login_required(*config.ADMIN_ROLES)
 def reports():
     by_status = query(
         """SELECT status, COUNT(*) AS n FROM clearance_requests GROUP BY status"""
@@ -227,7 +283,7 @@ def reports():
     )
     payments = query(
         """SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS n
-           FROM school_fee_payments WHERE status = 'successful'""",
+           FROM payments WHERE status = 'completed'""",
         fetch="one",
     )
     return render_template(
@@ -236,3 +292,55 @@ def reports():
         by_unit=by_unit,
         payments=payments,
     )
+
+@bp.route("/profile", methods=["GET", "POST"])
+@login_required(*config.ADMIN_ROLES)
+def profile():
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        bio = request.form.get("bio", "").strip()
+
+        if not full_name:
+            flash("Full name is required.", "error")
+            return redirect(url_for("admin.profile"))
+            
+        profile_pic_path = g.user.get("profile_pic_path")
+        credentials_path = g.user.get("credentials_path")
+
+        ALLOWED_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
+        
+        pic_file = request.files.get("profile_pic")
+        if pic_file and pic_file.filename:
+            ext = "." + pic_file.filename.rsplit(".", 1)[-1].lower() if "." in pic_file.filename else ""
+            if ext in {".png", ".jpg", ".jpeg", ".webp"}:
+                safe = secure_filename(pic_file.filename)
+                stored = f"profile-{g.user['id']}-{safe}"
+                dest = config.PROFILE_DIR / stored
+                pic_file.save(dest)
+                profile_pic_path = f"/uploads/profiles/{stored}"
+            else:
+                flash("Profile picture must be an image.", "error")
+
+        cred_file = request.files.get("credentials")
+        if cred_file and cred_file.filename:
+            ext = "." + cred_file.filename.rsplit(".", 1)[-1].lower() if "." in cred_file.filename else ""
+            if ext in ALLOWED_EXTS:
+                safe = secure_filename(cred_file.filename)
+                stored = f"cred-{g.user['id']}-{safe}"
+                dest = config.CREDENTIALS_DIR / stored
+                cred_file.save(dest)
+                credentials_path = f"/uploads/credentials/{stored}"
+            else:
+                flash("Credentials must be an image or PDF.", "error")
+
+        query(
+            """UPDATE users SET full_name = %s, phone = %s, bio = %s, 
+               profile_pic_path = %s, credentials_path = %s WHERE id = %s""",
+            (full_name, phone, bio, profile_pic_path, credentials_path, g.user["id"]),
+            fetch="none"
+        )
+        flash("Profile updated successfully.", "success")
+        return redirect(url_for("admin.profile"))
+
+    return render_template("admin/profile.html")

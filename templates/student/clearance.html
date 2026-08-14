@@ -1,26 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Request clearance{% endblock %}
+{% block title %}Clearance{% endblock %}
 {% block content %}
 <section class="card">
-  <h1>Request clearance</h1>
-  <p>Required fee for you: <strong>₦{{ '{:,.0f}'.format(fee) }}</strong>
-    ({{ 'indigene' if student.is_indigene else 'non-indigene' }}).</p>
+  <h1>Clearance Management</h1>
   {% if pending %}
-    <p class="alert error">You already have a pending request (#{{ pending.id }}).</p>
+    <p class="alert error">You already have a pending clearance request (#{{ pending.id }}).</p>
+    <a href="{{ url_for('student.request_detail', rid=pending.id) }}" class="btn">View Pending Request</a>
   {% else %}
-  <form method="post" enctype="multipart/form-data" id="clearance-form">
-    <label>Amount paid (₦)
-      <input type="number" name="declared_amount" id="declared_amount" value="{{ fee }}" required>
-    </label>
-    <label>Official payment reference (RRR) *
-      <input type="text" name="payment_reference" required minlength="5" placeholder="e.g. RRR-STUDENT1-001234567890">
-    </label>
-    <label>Receipt image *
-      <input type="file" name="receipt" id="receipt" accept="image/*" required>
-    </label>
-    <img id="preview" class="preview hidden" alt="Receipt preview">
-    <button type="submit" class="btn">Submit request</button>
-  </form>
+    <p>You can start a new clearance request to begin uploading receipts for each of the required departments.</p>
+    <form method="post">
+      <button type="submit" class="btn">Start Clearance Request</button>
+    </form>
   {% endif %}
 </section>
 
@@ -28,15 +18,19 @@
 <section class="card">
   <h2>Your requests</h2>
   <table>
-    <thead><tr><th>ID</th><th>Status</th><th>Score</th><th>Date</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>Status</th><th>Date</th><th>Unit Progress</th><th></th></tr></thead>
     <tbody>
     {% for r in history %}
       <tr>
         <td>#{{ r.id }}</td>
         <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
-        <td>{{ r.auto_score }} ({{ r.auto_decision }})</td>
-        <td>{{ r.created_at }}</td>
-        <td><a href="{{ url_for('student.request_detail', rid=r.id) }}">Open</a></td>
+        <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td style="font-size: 0.9em;">
+          {% for u in r.units %}
+            <div><strong>{{ unit_names.get(u.unit_code, u.unit_code) }}:</strong> <span class="badge {{ u.status }}" style="font-size: 0.8em; padding: 0.1em 0.4em;">{{ u.status }}</span></div>
+          {% endfor %}
+        </td>
+        <td><a href="{{ url_for('student.request_detail', rid=r.id) }}" class="btn ghost">Open</a></td>
       </tr>
     {% endfor %}
     </tbody>
@@ -44,3 +38,4 @@
 </section>
 {% endif %}
 {% endblock %}
+

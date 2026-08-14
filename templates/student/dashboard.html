@@ -1,47 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Student dashboard{% endblock %}
+
+{% block title %}Student Dashboard{% endblock %}
+{% block page_title %}Welcome, {{ student.full_name }}{% endblock %}
+
 {% block content %}
-<h1>Welcome, {{ student.full_name }}</h1>
-<div class="grid">
-  <article class="card">
-    <h2>School fee</h2>
-    <p>Status: <strong>{{ 'Indigene' if student.is_indigene else 'Non-indigene' }}</strong></p>
-    <p>Required: <strong>₦{{ '{:,.0f}'.format(fee) }}</strong></p>
-    <p>Recorded on ledger: <strong>₦{{ '{:,.0f}'.format(paid) }}</strong></p>
-    <a class="btn" href="{{ url_for('pay.start') }}">Pay school fees</a>
-  </article>
-  <article class="card">
-    <h2>Clearance</h2>
-    {% if latest %}
-      <p>Latest request #{{ latest.id }} —
-        <span class="badge {{ latest.status }}">{{ latest.status }}</span>
-      </p>
-      <p>Auto-check: {{ latest.auto_decision }} ({{ latest.auto_score }}/100)</p>
-      <a href="{{ url_for('student.request_detail', rid=latest.id) }}">View units</a>
-      {% if latest.certificate_path %}
-        <p><a class="btn" href="{{ latest.certificate_path }}">Download certificate</a></p>
-      {% endif %}
-    {% else %}
-      <p>You have not submitted a clearance request yet.</p>
-      <a class="btn" href="{{ url_for('student.clearance') }}">Request clearance</a>
-    {% endif %}
-  </article>
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-title">Status</div>
+    <div class="stat-value" style="font-size: 1.5rem; color: var(--primary);">{{ 'Indigene' if student.is_indigene else 'Non-indigene' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-title">Required (All Fees)</div>
+    <div class="stat-value">₦{{ '{:,.0f}'.format(total_expected) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-title">Total Recorded</div>
+    <div class="stat-value" style="color: var(--success);">₦{{ '{:,.0f}'.format(paid) }}</div>
+  </div>
 </div>
 
-<h2>Unit progress</h2>
-{% if unit_rows %}
-<table>
-  <thead><tr><th>Unit</th><th>Status</th></tr></thead>
-  <tbody>
-  {% for u in unit_rows %}
-    <tr>
-      <td>{{ dict(units).get(u.unit_code, u.unit_code) }}</td>
-      <td><span class="badge {{ u.status }}">{{ u.status }}</span></td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="muted">Submit a request to start unit clearance (Bursary, Library, Faculty, Department, Hostel, Student Affairs).</p>
-{% endif %}
+<div class="review-grid">
+  <div class="card">
+    <h2>Clearance Status</h2>
+    {% if latest %}
+      <div style="padding: 20px; background: var(--bg-main); border-radius: var(--radius-md); margin-bottom: 20px;">
+        <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem;">Request #{{ latest.id }}</h3>
+        <span class="badge {{ latest.status }}" style="margin-top: 10px; font-size: 0.9rem;">{{ latest.status }}</span>
+      </div>
+      <a href="{{ url_for('student.request_detail', rid=latest.id) }}" class="btn">View Units & Upload Receipts</a>
+      {% if latest.certificate_path %}
+        <a class="btn btn-success" href="{{ latest.certificate_path }}" style="margin-left: 10px;">Download Certificate</a>
+      {% endif %}
+    {% else %}
+      <p style="color: var(--text-muted); margin-bottom: 20px;">You have not started your clearance process yet.</p>
+      <a class="btn" href="{{ url_for('student.clearance') }}">Start Clearance Now</a>
+    {% endif %}
+  </div>
+
+  <div class="card table-container" style="padding: 0;">
+    <h2 style="padding: 25px 25px 10px 25px; margin: 0;">Unit Progress</h2>
+    {% if unit_rows %}
+    <table style="margin-bottom: 0;">
+      <thead><tr><th>Unit</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for u in unit_rows %}
+        <tr>
+          <td><strong>{{ unit_names.get(u.unit_code, u.unit_code) }}</strong></td>
+          <td><span class="badge {{ u.status }}">{{ u.status }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="padding: 0 25px 25px 25px; color: var(--text-muted);">Start a clearance request to track your progress across all departments.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

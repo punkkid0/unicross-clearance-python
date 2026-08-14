@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   full_name VARCHAR(120) NOT NULL,
   role VARCHAR(30) NOT NULL DEFAULT 'student',
+  phone VARCHAR(20),
+  bio TEXT,
+  profile_pic_path VARCHAR(255),
+  credentials_path VARCHAR(255),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,26 +30,17 @@ CREATE TABLE IF NOT EXISTS departments (
   name VARCHAR(80) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS school_fee_payments (
+CREATE TABLE IF NOT EXISTS payments (
   id SERIAL PRIMARY KEY,
   rrr VARCHAR(80) UNIQUE NOT NULL,
   student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   amount NUMERIC(12,2) NOT NULL,
-  payment_method VARCHAR(40) DEFAULT 'paystack',
-  status VARCHAR(20) NOT NULL DEFAULT 'successful',
+  payment_type VARCHAR(40) NOT NULL, -- e.g. school_fee, library, etc.
+  payment_method VARCHAR(40) DEFAULT 'bank_transfer',
+  status VARCHAR(20) NOT NULL DEFAULT 'completed',
   gateway_ref VARCHAR(80),
   notes TEXT,
   recorded_by INTEGER REFERENCES users(id),
-  payment_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS payments (
-  id SERIAL PRIMARY KEY,
-  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  amount NUMERIC(12,2) NOT NULL,
-  payment_type VARCHAR(40) DEFAULT 'school_fee',
-  status VARCHAR(20) NOT NULL DEFAULT 'completed',
-  rrr VARCHAR(80),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -57,6 +52,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   reference VARCHAR(80) UNIQUE NOT NULL,
   amount NUMERIC(12,2) NOT NULL,
   status VARCHAR(20) NOT NULL,
+  payment_type VARCHAR(40) NOT NULL,
   raw_payload TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -64,14 +60,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS clearance_requests (
   id SERIAL PRIMARY KEY,
   student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  receipt_path VARCHAR(255),
-  receipt_hash VARCHAR(64),
-  declared_amount NUMERIC(12,2) NOT NULL,
-  payment_reference VARCHAR(80) NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
-  auto_score INTEGER,
-  auto_decision VARCHAR(20),
-  auto_reasons TEXT,
   certificate_path VARCHAR(255),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -85,6 +74,13 @@ CREATE TABLE IF NOT EXISTS clearance_units (
   reason TEXT,
   reviewed_by INTEGER REFERENCES users(id),
   reviewed_at TIMESTAMP,
+  receipt_path VARCHAR(255),
+  receipt_hash VARCHAR(64),
+  declared_amount NUMERIC(12,2),
+  payment_reference VARCHAR(80),
+  auto_score INTEGER,
+  auto_decision VARCHAR(20),
+  auto_reasons TEXT,
   UNIQUE (request_id, unit_code)
 );
 
@@ -104,3 +100,4 @@ INSERT INTO departments (code, name) VALUES
   ('hostel', 'Hostel'),
   ('student_affairs', 'Student Affairs')
 ON CONFLICT (code) DO NOTHING;
+

@@ -1,17 +1,77 @@
 {% extends "base.html" %}
-{% block title %}My profile{% endblock %}
+
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
 {% block content %}
-<section class="card narrow">
-  <h1>My profile</h1>
-  <form method="post">
-    <label>Full name <input type="text" name="full_name" value="{{ student.full_name }}" required></label>
-    <label>Email <input type="email" name="email" value="{{ student.email }}" required></label>
-    <label>Matric number <input type="text" name="matric_no" value="{{ student.matric_no or '' }}"></label>
-    <p>Username: <strong>{{ student.username }}</strong> (cannot change)</p>
-    <p>Indigene status: <strong>{{ 'Indigene' if student.is_indigene else 'Non-indigene' }}</strong>
-      — expected fee ₦{{ '{:,.0f}'.format(fee) }}</p>
-    <p class="hint">Only bursary can change indigene status.</p>
-    <button type="submit" class="btn">Save</button>
-  </form>
-</section>
+<style>
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  .profile-pic-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: #64748b;
+    border: 3px solid white;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+  .profile-info h1 {
+    margin: 0 0 5px 0;
+  }
+  .profile-info p {
+    margin: 0;
+    color: #64748b;
+  }
+</style>
+
+<div class="profile-header">
+  {% if current_user.profile_pic_path %}
+    <img src="{{ current_user.profile_pic_path }}" alt="Profile Picture" class="profile-pic-large">
+  {% else %}
+    <div class="profile-pic-large">👤</div>
+  {% endif %}
+  <div class="profile-info">
+    <h1 style="color: var(--primary);">{{ student.full_name }}</h1>
+    <p>Student &middot; {{ student.email }}</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card" style="max-width: 600px;">
+  <h2 style="margin-bottom: 20px;">Edit Profile</h2>
+  
+  <label>Full Name *
+    <input type="text" name="full_name" value="{{ student.full_name }}" required>
+  </label>
+  
+  <label>Email *
+    <input type="email" name="email" value="{{ student.email }}" required>
+  </label>
+  
+  <label>Matric Number
+    <input type="text" name="matric_no" value="{{ student.matric_no or '' }}">
+  </label>
+
+  <label>Profile Picture (Image)
+    <input type="file" name="profile_pic" accept=".png, .jpg, .jpeg, .webp">
+    {% if current_user.profile_pic_path %}<small style="color: var(--text-muted); margin-top: 5px;">Uploading a new image will replace your current one.</small>{% endif %}
+  </label>
+  
+  <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--border);">
+    <p style="margin: 0 0 5px 0;">Username: <strong>{{ student.username }}</strong> <small class="muted">(cannot change)</small></p>
+    <p style="margin: 0 0 5px 0;">Indigene status: <strong>{{ 'Indigene' if student.is_indigene else 'Non-indigene' }}</strong></p>
+    <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Only bursary can change indigene status.</p>
+  </div>
+  
+  <button type="submit" class="btn" style="margin-top: 10px;">Save Profile</button>
+</form>
 {% endblock %}
