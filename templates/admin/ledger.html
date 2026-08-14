@@ -19,10 +19,19 @@
     </label>
     <label>Payment Type
       <select name="payment_type" required>
-        <option value="">Select fee type…</option>
-        {% for u in units %}
-          <option value="{{ u[0] }}">{{ u[1] }}</option>
-        {% endfor %}
+        {% if g.user.role == 'super_admin' %}
+          <option value="">Select fee type…</option>
+          {% for u in units %}
+            <option value="{{ u[0] }}">{{ u[1] }}</option>
+          {% endfor %}
+        {% else %}
+          {% set user_unit = g.user.role.replace('admin_', '') %}
+          {% for u in units %}
+            {% if u[0] == user_unit %}
+              <option value="{{ u[0] }}" selected>{{ u[1] }}</option>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
       </select>
     </label>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">

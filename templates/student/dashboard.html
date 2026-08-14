@@ -27,10 +27,12 @@
         <h3 style="margin: 0; color: var(--text-main); font-size: 1.1rem;">Request #{{ latest.id }}</h3>
         <span class="badge {{ latest.status }}" style="margin-top: 10px; font-size: 0.9rem;">{{ latest.status }}</span>
       </div>
-      <a href="{{ url_for('student.request_detail', rid=latest.id) }}" class="btn">View Units & Upload Receipts</a>
-      {% if latest.certificate_path %}
-        <a class="btn btn-success" href="{{ latest.certificate_path }}" style="margin-left: 10px;">Download Certificate</a>
-      {% endif %}
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{{ url_for('student.request_detail', rid=latest.id) }}" class="btn">View Units & Upload Receipts</a>
+        {% if latest.certificate_path %}
+          <a class="btn btn-success" href="{{ latest.certificate_path }}">Download Certificate</a>
+        {% endif %}
+      </div>
     {% else %}
       <p style="color: var(--text-muted); margin-bottom: 20px;">You have not started your clearance process yet.</p>
       <a class="btn" href="{{ url_for('student.clearance') }}">Start Clearance Now</a>

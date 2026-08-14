@@ -24,19 +24,19 @@ def add_admin_type(endpoint, values):
 @bp.route("/dashboard")
 @login_required(*config.ADMIN_ROLES)
 def dashboard():
-    stats = {
-        "students": query("SELECT COUNT(*) AS n FROM students", fetch="one")["n"],
-        "pending": query(
-            "SELECT COUNT(*) AS n FROM clearance_requests WHERE status = 'pending'",
-            fetch="one",
-        )["n"],
-        "approved": query(
-            "SELECT COUNT(*) AS n FROM clearance_requests WHERE status = 'approved'",
-            fetch="one",
-        )["n"],
-        "payments": query("SELECT COUNT(*) AS n FROM payments WHERE status = 'completed'", fetch="one")["n"],
-    }
     if g.user["role"] == "super_admin":
+        stats = {
+            "students": query("SELECT COUNT(*) AS n FROM students", fetch="one")["n"],
+            "pending": query(
+                "SELECT COUNT(*) AS n FROM clearance_requests WHERE status = 'pending'",
+                fetch="one",
+            )["n"],
+            "approved": query(
+                "SELECT COUNT(*) AS n FROM clearance_requests WHERE status = 'approved'",
+                fetch="one",
+            )["n"],
+            "payments": query("SELECT COUNT(*) AS n FROM payments WHERE status = 'completed'", fetch="one")["n"],
+        }
         recent = query(
             """SELECT cr.*, u.full_name, u.username
                FROM clearance_requests cr
@@ -46,8 +46,20 @@ def dashboard():
         )
     else:
         unit = g.user["role"].replace("admin_", "")
+        stats = {
+            "students": query("SELECT COUNT(*) AS n FROM students", fetch="one")["n"],
+            "pending": query(
+                "SELECT COUNT(*) AS n FROM clearance_units WHERE unit_code = %s AND status = 'pending' AND receipt_path IS NOT NULL",
+                (unit,), fetch="one"
+            )["n"],
+            "approved": query(
+                "SELECT COUNT(*) AS n FROM clearance_units WHERE unit_code = %s AND status = 'approved'",
+                (unit,), fetch="one"
+            )["n"],
+            "payments": query("SELECT COUNT(*) AS n FROM payments WHERE status = 'completed'", fetch="one")["n"],
+        }
         recent = query(
-            """SELECT cr.*, u.full_name, u.username
+            """SELECT cr.id, cr.student_id, cu.status AS status, cr.created_at, u.full_name, u.username
                FROM clearance_requests cr
                JOIN students s ON s.id = cr.student_id
                JOIN users u ON u.id = s.user_id
@@ -201,10 +213,6 @@ def review(rid):
 @bp.route("/ledger", methods=["GET", "POST"])
 @login_required(*config.ADMIN_ROLES)
 def ledger():
-    if g.user["role"] != "super_admin" and g.user["role"] != "admin_bursary":
-        flash("Only Bursary or Super Admin can access the ledger.", "error")
-        return redirect(url_for("admin.dashboard"))
-
     students = query(
         """SELECT s.id, u.full_name, u.username, s.matric_no, s.is_indigene
            FROM students s JOIN users u ON u.id = s.user_id
@@ -212,7 +220,12 @@ def ledger():
     )
     if request.method == "POST":
         rrr = (request.form.get("rrr") or "").strip()
-        payment_type = request.form.get("payment_type")
+        
+        if g.user["role"] == "super_admin":
+            payment_type = request.form.get("payment_type")
+        else:
+            payment_type = g.user["role"].replace("admin_", "")
+            
         try:
             student_id = int(request.form.get("student_id"))
             amount = float(request.form.get("amount"))
@@ -240,13 +253,26 @@ def ledger():
         flash("Official payment recorded on the ledger.", "success")
         return redirect(url_for("admin.ledger"))
 
-    rows = query(
-        """SELECT p.*, u.full_name, u.username
-           FROM payments p
-           JOIN students s ON s.id = p.student_id
-           JOIN users u ON u.id = s.user_id
-           ORDER BY p.created_at DESC"""
-    )
+    if g.user["role"] == "super_admin":
+        rows = query(
+            """SELECT p.*, u.full_name, u.username
+               FROM payments p
+               JOIN students s ON s.id = p.student_id
+               JOIN users u ON u.id = s.user_id
+               ORDER BY p.created_at DESC"""
+        )
+    else:
+        unit = g.user["role"].replace("admin_", "")
+        rows = query(
+            """SELECT p.*, u.full_name, u.username
+               FROM payments p
+               JOIN students s ON s.id = p.student_id
+               JOIN users u ON u.id = s.user_id
+               WHERE p.payment_type = %s
+               ORDER BY p.created_at DESC""",
+            (unit,)
+        )
+        
     return render_template("admin/ledger.html", students=students, rows=rows, units=config.CLEARANCE_UNITS)
 
 

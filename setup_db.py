@@ -103,13 +103,16 @@ def main():
             (uid, "22/CSC/124"),
         )
         sid = cur.fetchone()[0]
-        cur.execute(
-            """INSERT INTO payments (rrr, student_id, amount, payment_type, payment_method, notes)
-               VALUES (%s, %s, %s, 'bursary', 'remita', 'Demo official payment for student1')
-               ON CONFLICT (rrr) DO NOTHING""",
-            ("RRR-STUDENT1-001234567890", sid, 75600),
-        )
-        print("Seeded student1 / student123 + demo RRR")
+        from config import expected_fee, CLEARANCE_UNITS
+        for code, _name in CLEARANCE_UNITS:
+            fee = expected_fee(True, code)
+            cur.execute(
+                """INSERT INTO payments (rrr, student_id, amount, payment_type, payment_method, notes)
+                   VALUES (%s, %s, %s, %s, 'remita', %s)
+                   ON CONFLICT (rrr) DO NOTHING""",
+                (f"RRR-DEMO-{code.upper()}-123", sid, fee, code, f"Demo official payment for {code}"),
+            )
+        print("Seeded student1 / student123 + demo RRRs for all departments")
     else:
         print("student1 already exists")
 
