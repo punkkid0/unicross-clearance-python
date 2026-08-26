@@ -9,6 +9,9 @@ echo   UNICROSS Payment Verification ^& Clearance
 echo   Python + HTML/CSS/JS + PostgreSQL
 echo ============================================================
 echo.
+echo Project folder:
+echo   %CD%
+echo.
 
 where python >nul 2>nul
 if errorlevel 1 (
@@ -20,18 +23,51 @@ if errorlevel 1 (
   exit /b 1
 )
 
-python -m venv .venv
+echo Python found:
+python -V
+echo.
+
+REM A copied/moved .venv keeps the OLD computer path inside pip.exe.
+REM That looks like an internet error. Always rebuild the venv here.
+if exist ".venv\" (
+  echo Removing old virtual environment so it matches THIS folder...
+  rmdir /s /q ".venv" 2>nul
+)
+
+echo Creating a new virtual environment...
+python -m venv ".venv"
 if errorlevel 1 (
   echo Could not create a virtual environment.
+  echo If this folder was copied, make sure you can write files here.
   pause
   exit /b 1
 )
 
-call .venv\Scripts\activate.bat
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+if not exist ".venv\Scripts\python.exe" (
+  echo Virtual environment is missing python.exe. Setup cannot continue.
+  pause
+  exit /b 1
+)
+
+echo Installing packages with python -m pip (this needs internet)...
+".venv\Scripts\python.exe" -m pip install --upgrade pip
 if errorlevel 1 (
-  echo pip install failed. Check your internet connection.
+  echo Could not upgrade pip.
+  echo This can be a proxy, antivirus, or a blocked pypi.org — not always "no internet".
+  pause
+  exit /b 1
+)
+
+".venv\Scripts\python.exe" -m pip install -r "%CD%\requirements.txt"
+if errorlevel 1 (
+  echo.
+  echo Package install failed.
+  echo Real cause is printed ABOVE this line. It is usually:
+  echo   - project folder was moved and an old .venv was reused  (fixed by this script)
+  echo   - Python is too new / a package has no Windows wheel
+  echo   - pip cannot reach https://pypi.org
+  echo   - the folder path has unusual permissions
+  echo.
   pause
   exit /b 1
 )
@@ -53,7 +89,7 @@ if defined DBPASS if not "!DBPASS!"=="your_password" (
 set /p DBPASS="PostgreSQL password: "
 
 set "SECRET="
-for /f "usebackq delims=" %%H in (`python -c "import secrets; print(secrets.token_hex(32))"`) do set "SECRET=%%H"
+for /f "usebackq delims=" %%H in (`".venv\Scripts\python.exe" -c "import secrets; print(secrets.token_hex(32))"`) do set "SECRET=%%H"
 
 > ".env" (
   echo FLASK_SECRET_KEY=!SECRET!
@@ -73,7 +109,7 @@ for /f "usebackq delims=" %%H in (`python -c "import secrets; print(secrets.toke
 :rundb
 echo.
 echo Creating database and demo users...
-python setup_db.py
+".venv\Scripts\python.exe" "%CD%\setup_db.py"
 if errorlevel 1 (
   echo Database setup failed. Is PostgreSQL running? Is the password correct?
   pause

@@ -19,7 +19,17 @@ During setup, tick **Add python.exe to PATH**.
 https://www.postgresql.org/download/windows/  
 Write down the **postgres** user password.
 
-## 4. Double-click `setup.bat`
+## 4. Put the folder in a simple path, then double-click `setup.bat`
+
+Do **not** run it from a copied “backup files” folder if a `.venv` from another location is still inside.
+
+Best location example:
+
+`C:\Users\user\Desktop\unicross-clearance-python`
+
+If setup failed once, delete the `.venv` folder, then double-click `setup.bat` again. The script now rebuilds `.venv` for **this** path and uses `python -m pip` (the old error was a broken `pip.exe` launcher, not the internet).
+
+## 5. Double-click `setup.bat`
 
 It will:
 
@@ -30,7 +40,7 @@ It will:
 - create database `unicross_clearance`
 - add demo admin and student
 
-## 5. Double-click `start.bat`
+## 6. Double-click `start.bat`
 
 Browser: **http://localhost:5000**
 
