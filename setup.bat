@@ -27,8 +27,6 @@ echo Python found:
 python -V
 echo.
 
-REM A copied/moved .venv keeps the OLD computer path inside pip.exe.
-REM That looks like an internet error. Always rebuild the venv here.
 if exist ".venv\" (
   echo Removing old virtual environment so it matches THIS folder...
   rmdir /s /q ".venv" 2>nul
@@ -36,38 +34,22 @@ if exist ".venv\" (
 
 echo Creating a new virtual environment...
 python -m venv ".venv"
-if errorlevel 1 (
-  echo Could not create a virtual environment.
-  echo If this folder was copied, make sure you can write files here.
-  pause
-  exit /b 1
-)
-
 if not exist ".venv\Scripts\python.exe" (
-  echo Virtual environment is missing python.exe. Setup cannot continue.
+  echo Could not create a virtual environment.
   pause
   exit /b 1
 )
 
-echo Installing packages with python -m pip (this needs internet)...
-".venv\Scripts\python.exe" -m pip install --upgrade pip
-if errorlevel 1 (
-  echo Could not upgrade pip.
-  echo This can be a proxy, antivirus, or a blocked pypi.org — not always "no internet".
-  pause
-  exit /b 1
-)
+echo Installing packages (this needs internet)...
+".venv\Scripts\python.exe" -m pip install --upgrade pip --disable-pip-version-check
+".venv\Scripts\python.exe" -m pip install -r "%CD%\requirements.txt" --disable-pip-version-check
 
-".venv\Scripts\python.exe" -m pip install -r "%CD%\requirements.txt"
+echo.
+echo Checking that the main packages imported...
+".venv\Scripts\python.exe" -c "import flask, dotenv, pg8000, bcrypt, reportlab; print('Packages OK')"
 if errorlevel 1 (
   echo.
-  echo Package install failed.
-  echo Real cause is printed ABOVE this line. It is usually:
-  echo   - project folder was moved and an old .venv was reused  (fixed by this script)
-  echo   - Python is too new / a package has no Windows wheel
-  echo   - pip cannot reach https://pypi.org
-  echo   - the folder path has unusual permissions
-  echo.
+  echo Packages did not import. Scroll up for the real pip error.
   pause
   exit /b 1
 )
@@ -81,12 +63,18 @@ for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
 
 echo.
 echo Enter the PostgreSQL "postgres" user password.
+echo (The password you typed when you installed PostgreSQL.)
 if defined DBPASS if not "!DBPASS!"=="your_password" (
   echo .env already has a password.
   set /p KEEP="Keep it? (Y/n): "
   if /I not "!KEEP!"=="n" goto :rundb
 )
 set /p DBPASS="PostgreSQL password: "
+if not defined DBPASS (
+  echo No password entered.
+  pause
+  exit /b 1
+)
 
 set "SECRET="
 for /f "usebackq delims=" %%H in (`".venv\Scripts\python.exe" -c "import secrets; print(secrets.token_hex(32))"`) do set "SECRET=%%H"
@@ -101,8 +89,6 @@ for /f "usebackq delims=" %%H in (`".venv\Scripts\python.exe" -c "import secrets
   echo DB_USER=postgres
   echo DB_PASSWORD=!DBPASS!
   echo.
-  echo PAYSTACK_SECRET_KEY=
-  echo PAYSTACK_PUBLIC_KEY=
   echo BASE_URL=http://localhost:5000
 )
 
@@ -111,7 +97,10 @@ echo.
 echo Creating database and demo users...
 ".venv\Scripts\python.exe" "%CD%\setup_db.py"
 if errorlevel 1 (
-  echo Database setup failed. Is PostgreSQL running? Is the password correct?
+  echo.
+  echo Database setup failed.
+  echo - Is PostgreSQL installed and running?
+  echo - Did you type the same postgres password as during PostgreSQL install?
   pause
   exit /b 1
 )
@@ -120,7 +109,7 @@ echo.
 echo Setup finished.
 echo Next: double-click start.bat
 echo Then open http://localhost:5000
-echo   Admin    admin / admin123
-echo   Student  student1 / student123
+echo   Super admin  admin / admin123
+echo   Student      student1 / student123
 echo.
 pause

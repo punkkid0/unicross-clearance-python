@@ -27,7 +27,9 @@ Best location example:
 
 `C:\Users\user\Desktop\unicross-clearance-python`
 
-If setup failed once, delete the `.venv` folder, then double-click `setup.bat` again. The script now rebuilds `.venv` for **this** path and uses `python -m pip` (the old error was a broken `pip.exe` launcher, not the internet).
+If setup failed once, delete the `.venv` folder, then double-click `setup.bat` again.
+
+If the window shows **Successfully installed** and then still says it failed, that was an old script bug. Use the latest `setup.bat` from GitHub. It continues when the packages actually installed.
 
 ## 5. Double-click `setup.bat`
 
