@@ -14,7 +14,7 @@ Before running the code, you **must** install the following software on your Win
 
 2. **PostgreSQL (Version 15 or 16)**
    - Download the Windows installer from the official PostgreSQL website.
-   - **CRITICAL STEP:** During the installation, it will ask you to create a master password for the default `postgres` user. You must set this password exactly to **`postgres`** (all lowercase). If you set it to anything else, the Python code will crash because it won't be able to log in!
+   - During install it asks for a password for the `postgres` user. **Remember whatever you type.** You will enter that same password when `setup.bat` asks. It does not have to be the word `postgres`.
 
 3. **VS Code (Optional but Recommended)**
    - Download Visual Studio Code to easily open the project folder and use the built-in terminal.
@@ -26,13 +26,8 @@ Before running the code, you **must** install the following software on your Win
 Once PostgreSQL is installed, you need to create the specific database for this project:
 
 1. Open **pgAdmin 4** (this installed automatically when you installed PostgreSQL).
-2. It will ask for your master password. Type in `postgres`.
-3. On the left sidebar, click the dropdown arrow next to **Servers** -> **PostgreSQL**.
-4. Right-click on **Databases**, select **Create** -> **Database...**
-5. In the "Database" name field, type exactly: **`unicross_db`**
-6. Click **Save**.
-
-You now have a blank database waiting for the code!
+2. It will ask for your master password (the one from the PostgreSQL installer).
+3. You do **not** need to create the database by hand. `setup.bat` creates `unicross_clearance` for you.
 
 ---
 

@@ -69,5 +69,5 @@ python run.py
 | Problem | Fix |
 |---|---|
 | `python` not found | Reinstall Python with PATH ticked, open a new window |
-| Database password error | Same password as PostgreSQL installer, saved in `.env` |
+| Database password error / `auth_failed` | Type the password from **this PC's** PostgreSQL install. Do not keep a copied `.env` from another laptop. |
 | `ECONNREFUSED` | Start the PostgreSQL Windows service |

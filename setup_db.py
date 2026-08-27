@@ -36,7 +36,19 @@ def connect(dbname):
 
 
 def main():
-    admin = connect("postgres")
+    try:
+        admin = connect("postgres")
+    except Exception as exc:
+        msg = str(exc).lower()
+        print("Could not log in to PostgreSQL as user 'postgres'.")
+        if "auth" in msg or "password" in msg or "28p01" in msg:
+            print("The password in .env is wrong for THIS computer.")
+            print("Run setup.bat again and type the password you set when installing PostgreSQL.")
+        elif "refused" in msg or "could not connect" in msg:
+            print("PostgreSQL is not running. Open Services and start postgresql-x64-XX.")
+        else:
+            print(exc)
+        sys.exit(1)
     admin.autocommit = True
     cur = admin.cursor()
     cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (DB_NAME,))

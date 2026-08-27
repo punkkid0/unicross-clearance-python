@@ -54,21 +54,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist ".env" copy /Y ".env.example" ".env" >nul
-
-set "DBPASS="
-for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
-  if /I "%%A"=="DB_PASSWORD" set "DBPASS=%%B"
-)
-
 echo.
-echo Enter the PostgreSQL "postgres" user password.
-echo (The password you typed when you installed PostgreSQL.)
-if defined DBPASS if not "!DBPASS!"=="your_password" (
-  echo .env already has a password.
-  set /p KEEP="Keep it? (Y/n): "
-  if /I not "!KEEP!"=="n" goto :rundb
-)
+echo Type the PostgreSQL password from THIS computer.
+echo That is the password you chose when installing PostgreSQL.
+echo Do not keep a password copied from another laptop.
+echo.
 set /p DBPASS="PostgreSQL password: "
 if not defined DBPASS (
   echo No password entered.
