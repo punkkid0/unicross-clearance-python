@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 
-SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-only-change-me")
+SECRET_KEY = os.getenv("FLASK_SECRET_KEY") or "dev-only-change-me"
 DEBUG = os.getenv("FLASK_DEBUG", "1") == "1"
 
 DB_HOST = os.getenv("DB_HOST", "localhost")

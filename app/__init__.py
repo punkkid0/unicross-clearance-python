@@ -11,7 +11,7 @@ def create_app():
         template_folder=str(root / "templates"),
         static_folder=str(root / "static"),
     )
-    app.secret_key = config.SECRET_KEY
+    app.secret_key = config.SECRET_KEY or "dev-only-change-me"
     app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
     config.RECEIPT_DIR.mkdir(parents=True, exist_ok=True)
