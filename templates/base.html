@@ -44,7 +44,7 @@
       {% endif %}
       <div class="user-info">
         <strong>{{ current_user.full_name }}</strong>
-        <small>{{ current_user.role.replace('admin_', '').replace('_', ' ') }}</small>
+        <small>{% if current_user.role == 'super_admin' %}super admin (view only){% else %}{{ current_user.role.replace('admin_', '').replace('_', ' ') }}{% endif %}</small>
       </div>
       <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Logout">⏻</a>
     </div>

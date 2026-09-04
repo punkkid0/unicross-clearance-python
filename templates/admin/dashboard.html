@@ -11,6 +11,9 @@
 {% endblock %}
 
 {% block content %}
+{% if current_user.role == 'super_admin' %}
+  <p class="alert success">You can monitor all offices. You cannot approve, reject, or change any unit’s clearance.</p>
+{% endif %}
 <div class="stat-grid">
   <div class="stat-card">
     <div class="stat-title">Total Students</div>
@@ -40,7 +43,7 @@
         <td>#{{ r.id }}</td>
         <td><strong>{{ r.full_name }}</strong><br><small style="color:var(--text-muted);">@{{ r.username }}</small></td>
         <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
-        <td><a href="{{ url_for('admin.review', rid=r.id) }}" class="btn" style="padding: 6px 12px; font-size: 0.85rem;">Review</a></td>
+        <td><a href="{{ url_for('admin.review', rid=r.id) }}" class="btn" style="padding: 6px 12px; font-size: 0.85rem;">{% if current_user.role == 'super_admin' %}View{% else %}Review{% endif %}</a></td>
       </tr>
     {% else %}
       <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No recent requests found.</td></tr>

@@ -6,6 +6,7 @@
 {% block content %}
 <p style="color: var(--text-muted); margin-bottom: 25px;">This is the source of truth for automatic verification (thesis: bank API / gateway or bursary record).</p>
 
+{% if g.user.role != 'super_admin' %}
 <section class="card">
   <h2>Record a Payment</h2>
   <form method="post" style="max-width: 600px;">
@@ -51,6 +52,9 @@
     <button class="btn" type="submit" style="margin-top: 10px;">Save to Ledger</button>
   </form>
 </section>
+{% else %}
+<p class="alert success">Super admin can view the ledger only. Unit admins record payments.</p>
+{% endif %}
 
 <div class="card table-container" style="padding: 0;">
   <table style="margin-bottom: 0;">

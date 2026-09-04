@@ -124,9 +124,13 @@ def review(rid):
         reason = (request.form.get("reason") or "").strip()
         role = g.user["role"]
 
+        if role == "super_admin":
+            flash("Super admin is view-only and cannot change clearance or student records.", "error")
+            return redirect(url_for("admin.review", rid=rid))
+
         if action == "indigene":
-            if role != "super_admin" and role != "admin_bursary":
-                flash("Only Bursary or Super Admin can change indigene status.", "error")
+            if role != "admin_bursary":
+                flash("Only Bursary can change indigene status.", "error")
                 return redirect(url_for("admin.review", rid=rid))
             flag = request.form.get("is_indigene") == "1"
             query("UPDATE students SET is_indigene = %s WHERE id = %s", (flag, req["sid"]), fetch="none")
@@ -134,8 +138,8 @@ def review(rid):
             return redirect(url_for("admin.review", rid=rid))
 
         if action in ("approve_unit", "reject_unit"):
-            if role != "super_admin" and role != f"admin_{unit}":
-                flash(f"You do not have permission to approve/reject the {unit} unit.", "error")
+            if role != f"admin_{unit}":
+                flash(f"Only the {unit_label(unit)} admin can approve or reject this unit.", "error")
                 return redirect(url_for("admin.review", rid=rid))
 
             if req["status"] != "pending":
@@ -219,12 +223,11 @@ def ledger():
            ORDER BY u.full_name"""
     )
     if request.method == "POST":
-        rrr = (request.form.get("rrr") or "").strip()
-        
         if g.user["role"] == "super_admin":
-            payment_type = request.form.get("payment_type")
-        else:
-            payment_type = g.user["role"].replace("admin_", "")
+            flash("Super admin is view-only and cannot record payments.", "error")
+            return redirect(url_for("admin.ledger"))
+        rrr = (request.form.get("rrr") or "").strip()
+        payment_type = g.user["role"].replace("admin_", "")
             
         try:
             student_id = int(request.form.get("student_id"))
@@ -280,8 +283,8 @@ def ledger():
 @login_required(*config.ADMIN_ROLES)
 def students():
     if request.method == "POST":
-        if g.user["role"] != "super_admin" and g.user["role"] != "admin_bursary":
-            flash("Only Bursary or Super Admin can edit student info.", "error")
+        if g.user["role"] != "admin_bursary":
+            flash("Only Bursary can edit student indigene status.", "error")
             return redirect(url_for("admin.students"))
             
         sid = int(request.form.get("student_id"))

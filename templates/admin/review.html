@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Review #{{ req.id }}{% endblock %}
 {% block content %}
-<h1>Review request #{{ req.id }}</h1>
+<h1>{% if g.user.role == 'super_admin' %}Monitor{% else %}Review{% endif %} request #{{ req.id }}</h1>
+{% if g.user.role == 'super_admin' %}
+  <p class="alert success">Super admin is view-only. You can see every unit’s progress. Only each office admin can approve or reject.</p>
+{% endif %}
 <div class="grid">
   <article class="card">
     <h2>Student</h2>
     <p>{{ req.full_name }} (@{{ req.username }})</p>
     <p>{{ req.email }} · Matric {{ req.matric_no or '—' }}</p>
     <p>Indigene: <strong>{{ 'Yes' if req.is_indigene else 'No' }}</strong></p>
-    {% if g.user.role == 'super_admin' or g.user.role == 'admin_bursary' %}
+    {% if g.user.role == 'admin_bursary' %}
       <form method="post" class="inline">
         <input type="hidden" name="action" value="indigene">
         <input type="hidden" name="is_indigene" value="{{ '0' if req.is_indigene else '1' }}">
@@ -42,7 +45,7 @@
     {% endif %}
 
     {% if req.status == 'pending' and u.status == 'pending' %}
-      {% if g.user.role == 'super_admin' or g.user.role == 'admin_' ~ u.unit_code %}
+      {% if g.user.role == 'admin_' ~ u.unit_code %}
         <form method="post" class="unit-form">
           <input type="hidden" name="unit_code" value="{{ u.unit_code }}">
           <label>Note / rejection reason
@@ -51,6 +54,8 @@
           <button class="btn" name="action" value="approve_unit" type="submit">Approve this unit</button>
           <button class="btn danger" name="action" value="reject_unit" type="submit">Reject</button>
         </form>
+      {% elif g.user.role == 'super_admin' %}
+        <p class="muted">Waiting for {{ unit_names.get(u.unit_code, u.unit_code) }} admin. Super admin cannot approve or reject.</p>
       {% else %}
         <p class="muted">Waiting for {{ unit_names.get(u.unit_code, u.unit_code) }} Admin to review.</p>
       {% endif %}
